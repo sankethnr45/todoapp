@@ -1,46 +1,71 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react'; // 1. Import useEffect
+import axios from 'axios'; // 2. Import axios
 import './App.css';
 import Header from './components/Header';
 import TaskList from './components/TaskList';
-import TaskForm from './components/TaskForm'; // 1. Import TaskForm
+import TaskForm from './components/TaskForm';
+
+// Define the base URL for our API
+const API_URL = 'http://localhost:5001/api/tasks';
 
 function App() {
-  const [tasks, setTasks] = useState([
-    { id: 1, text: 'Learn React', completed: false },
-    { id: 2, text: 'Build a Task App', completed: false },
-    { id: 3, text: 'Deploy the App', completed: false },
-  ]);
+  // Start with an empty array. Data will come from the API.
+  const [tasks, setTasks] = useState([]);
 
-  // 2. Create the function to add a new task
-  const addTask = (text) => {
-    const newTask = {
-      id: Date.now(), // Use a timestamp for a simple unique ID
-      text: text,
-      completed: false,
+  // 3. useEffect to fetch tasks when the app loads
+  useEffect(() => {
+    const getTasks = async () => {
+      try {
+        const res = await axios.get(API_URL);
+        setTasks(res.data);
+      } catch (err) {
+        console.error('Error fetching tasks:', err);
+      }
     };
-    // Use the setTasks function to add the new task to the existing list
-    setTasks([...tasks, newTask]);
+    getTasks();
+  }, []); // The empty array [] means this effect runs only once on mount
+
+  // 4. Update addTask to use the API
+  const addTask = async (text) => {
+    try {
+      const res = await axios.post(API_URL, { text: text });
+      // Add the new task returned from the server to our state
+      setTasks([...tasks, res.data]);
+    } catch (err) {
+      console.error('Error adding task:', err);
+    }
   };
 
-   const deleteTask = (idToDelete) => {
-    // 2. Use setTasks with the filter method to create a new array
-    setTasks(tasks.filter(task => task.id !== idToDelete));
+  // 5. Update deleteTask to use the API
+  const deleteTask = async (id) => {
+    try {
+      await axios.delete(`${API_URL}/${id}`);
+      // Filter out the deleted task from our state
+      setTasks(tasks.filter(task => task._id !== id));
+    } catch (err) {
+      console.error('Error deleting task:', err);
+    }
   };
 
-   const toggleTask = (idToToggle) => {
-    setTasks(
-      tasks.map(task =>
-        // 2. If the task ID matches, create a new object with the toggled 'completed' value
-        task.id === idToToggle ? { ...task, completed: !task.completed } : task
-      )
-    );
+  // 6. Update toggleTask to use the API
+  const toggleTask = async (id) => {
+    try {
+      const res = await axios.put(`${API_URL}/${id}`);
+      // Update the specific task in our state
+      setTasks(
+        tasks.map(task =>
+          task._id === id ? res.data : task
+        )
+      );
+    } catch (err) {
+      console.error('Error updating task:', err);
+    }
   };
 
   return (
     <div className="App">
       <Header />
       <TaskForm onAddTask={addTask} />
-      {/* 3. Pass the new function down to TaskList */}
       <TaskList
         tasks={tasks}
         onDeleteTask={deleteTask}
